@@ -88,7 +88,7 @@ const getAllArticles = async (req, res) => {
                 : { createdAt: -1 };
 
         const filter = {};
-
+        
         if (search) {
             filter.content = {
                 $regex: search,
