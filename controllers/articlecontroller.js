@@ -102,18 +102,23 @@ const getAllArticles = async (req, res) => {
 
         const totalArticles = await Article.countDocuments(filter);
 
-        const articles = await Article.find(filter)
-            .sort(sortOption)
-            .skip(skip)
-            .limit(limit);
+const articles = await Article.find(filter)
+    .sort(sortOption)
+    .skip(skip)
+    .limit(limit);
 
-        return res.status(200).json({
-            success: true,
-            currentPage: page,
-            totalPages: Math.ceil(totalArticles / limit),
-            totalArticles,
-            data: articles
-        });
+const currentCount = articles.length;
+
+const totalPages = Math.ceil(totalArticles / limit);
+
+return res.status(200).json({
+    success: true,
+    currentPage: page,
+    totalPages,
+    totalArticles,
+    currentCount,
+    data: articles
+});
 
     } catch (error) {
 
