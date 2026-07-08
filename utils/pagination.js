@@ -2,7 +2,7 @@ const getAllArticles = async (req, res) => {
 
     try {
 
-        const page = parseInt(req.query.page) || 1;
+        const page = parseInt(req.query.page) || 1;    // parseInt() function is used to convert the string value of
         const limit = parseInt(req.query.limit) || 10;
 
         const skip = (page - 1) * limit;

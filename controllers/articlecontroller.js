@@ -1,22 +1,13 @@
 const Article = require("../models/articleModel");
-const validateArticle = require("../validations/articlevalidation");
+const { uploadToS3, deleteFromS3 } = require("../utils/uploadToS3");
+
 
 // Create Article
 const createArticle = async (req, res) => {
 
     try {
 
-        // Validate Request
-        const { error } = validateArticle(req.body);
-
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message
-            });
-        }
-
-        // Check Image
+        // Image Validation
         if (!req.file) {
             return res.status(400).json({
                 success: false,
@@ -29,7 +20,7 @@ const createArticle = async (req, res) => {
         // Convert Tags into Array
         tags = Array.isArray(tags) ? tags : [tags];
 
-        // Remove HTML Tags from React Quill Content
+        // Remove HTML Tags
         const plainText = content.replace(/<[^>]*>/g, "");
 
         // Count Words
@@ -38,15 +29,17 @@ const createArticle = async (req, res) => {
         // Calculate Read Time
         const readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
 
-        // Create Article
+        // Upload Image to AWS S3
+        const imageKey = await uploadToS3(req.file, "article-images");
+
         const article = await Article.create({
 
-            image: `uploads/images/${req.file.filename}`,
-            content,
-            tags,
-            readTime
+           image: imageKey,
+           content,
+           tags,
+           readTime
 
-        });
+           });
 
         return res.status(201).json({
 
@@ -59,23 +52,24 @@ const createArticle = async (req, res) => {
     } catch (error) {
 
         console.log(error);
+
         return res.status(500).json({
-        success: false,
-        message: error.message
+
+            success: false,
+            message: error.message
 
         });
 
     }
 
 };
-
 // View All Articles with pagination search and filter
 
 const getAllArticles = async (req, res) => {
 
     try {
 
-        const page = Number(req.query.page) || 1;
+        const page = Number(req.query.page) || 1; 
         const limit = Number(req.query.limit) || 6;
         const skip = (page - 1) * limit;
 
@@ -84,26 +78,28 @@ const getAllArticles = async (req, res) => {
 
         const sortOption =
             req.query.sort === "oldest"
+
                 ? { createdAt: 1 }
                 : { createdAt: -1 };
+                // console.log(sortOption);
 
         const filter = {};
         
-        if (search) {
+        if (search) {   
             filter.content = {
-                $regex: search,
-                $options: "i"
+                $regex: search,     // regex operator  means search for the content ( regular expression) and that matches the search term in the content field of the articles collection.
+                $options: "i"     // i option means case - insensitivs search, so it will match the search term regardless of whether it is uppercase or lowercase.
             };
         }
 
         if (tag) {
-            filter.tags = tag;
+            filter.tags = tag; // if tags are available 
         }
 
         const totalArticles = await Article.countDocuments(filter);
 
-const articles = await Article.find(filter)
-    .sort(sortOption)
+const articles = await Article.find(filter) // this
+    .sort(sortOption)               
     .skip(skip)
     .limit(limit);
 
@@ -174,15 +170,6 @@ const updateArticle = async (req, res) => {
 
     try {
 
-        const { error } = validateArticle(req.body, true);
-
-        if (error) {
-            return res.status(400).json({
-                success: false,
-                message: error.details[0].message
-            });
-        }
-
         const article = await Article.findById(req.params.id);
 
         if (!article) {
@@ -192,18 +179,23 @@ const updateArticle = async (req, res) => {
             });
         }
 
+        // Update Content
         if (req.body.content) {
 
             article.content = req.body.content;
 
+            // Remove HTML Tags
             const plainText = req.body.content.replace(/<[^>]*>/g, "");
 
+            // Count Words
             const wordCount = plainText.trim().split(/\s+/).length;
 
+            // Calculate Read Time
             article.readTime = `${Math.max(1, Math.ceil(wordCount / 200))} min read`;
 
         }
 
+        // Update Tags
         if (req.body.tags) {
 
             article.tags = Array.isArray(req.body.tags)
@@ -212,12 +204,23 @@ const updateArticle = async (req, res) => {
 
         }
 
+        // Update Image
         if (req.file) {
 
-            article.image = `uploads/images/${req.file.filename}`;
+            
+            if (article.image) {
+                await deleteFromS3(article.image);
+            }
+
+            
+            const imageKey = await uploadToS3(req.file, "article-images");
+
+            
+            article.image = imageKey;
 
         }
 
+        // Save Changes
         await article.save();
 
         return res.status(200).json({
@@ -249,12 +252,13 @@ const deleteArticle = async (req, res) => {
 
     try {
 
+        // Find Article
         const article = await Article.findById(req.params.id);
 
         if (!article) {
 
             return res.status(404).json({
- 
+
                 success: false,
                 message: "Article not found"
 
@@ -262,6 +266,14 @@ const deleteArticle = async (req, res) => {
 
         }
 
+        // Delete Image from AWS S3
+        if (article.image) {
+
+            await deleteFromS3(article.image);
+
+        }
+
+        // Delete Article from MongoDB
         await Article.findByIdAndDelete(req.params.id);
 
         return res.status(200).json({

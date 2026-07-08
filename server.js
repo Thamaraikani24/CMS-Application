@@ -10,10 +10,7 @@ connectDB();
 
 app.use(express.json());
 
-app.use("/uploads", express.static("uploads"));
-
 app.use("/articles", articleRoutes);
-
 
 app.get("/", (req, res) => {
     res.send("CMS Backend Running...");
