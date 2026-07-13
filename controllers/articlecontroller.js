@@ -185,7 +185,7 @@ const updateArticle = async (req, res) => {
             article.content = req.body.content;
 
             // Remove HTML Tags
-            const plainText = req.body.content.replace(/<[^>]*>/g, "");
+            const plainText = req.body.content.replace(/<[^>]*>/g, ""); /// g name means global search, it will remove all the html tags from thr content
 
             // Count Words
             const wordCount = plainText.trim().split(/\s+/).length;

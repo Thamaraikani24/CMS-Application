@@ -4,11 +4,13 @@ const articleSchema = new Schema(
         image: {
             type: String,
             required: true
+            
         },
 
         content: {
             type: String,
             required: true
+            
         },
 
         tags: [

@@ -1,23 +1,30 @@
 require("dotenv").config();
 
 const express = require("express");
+const { errors } = require("celebrate");
+
 const connectDB = require("./config/database");
-const articleRoutes = require("./routes/articleroutes");
+
+const articleRoutes = require("./routes/articleRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
+// Database Connection
 connectDB();
 
+// Middleware
 app.use(express.json());
 
-app.use("/articles", articleRoutes);
+// Routes
+app.use("/api/articles", articleRoutes);
+app.use("/api/auth", authRoutes);
 
-app.get("/", (req, res) => {
-    res.send("CMS Backend Running...");
-});
+// Celebrate Error Handler
+app.use(errors());
 
-const PORT = process.env.PORT || 4000;
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
-    console.log(`Server Running On Port ${PORT}`);
+    console.log(`Server is running on port ${PORT}`);
 });
